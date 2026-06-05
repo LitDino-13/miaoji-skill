@@ -93,14 +93,21 @@ brew install ffmpeg
 
 ### Python 依赖
 
-建议在 skill 目录内创建独立虚拟环境：
+进入你安装后的 skill 目录，也就是包含 `SKILL.md` 的目录。下面用 `SKILL_DIR` 表示这个目录：
 
 ```bash
-cd ~/.codex/skills/妙计.Skill
+SKILL_DIR="/path/to/installed/妙计.Skill"
+cd "$SKILL_DIR"
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip setuptools wheel
 .venv/bin/python -m pip install torch torchaudio funasr modelscope
 ```
+
+常见示例：
+
+- 通用 Agent Skills：`~/.agents/skills/妙计.Skill`
+- Codex：`~/.codex/skills/妙计.Skill`
+- Claude Code：`~/.claude/skills/妙计.Skill`
 
 安装后检查：
 

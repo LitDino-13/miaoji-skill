@@ -9,7 +9,7 @@ Turn one uploaded audio recording into two Obsidian Markdown notes.
 
 ## Core Promise
 
-Input: one audio attachment uploaded by the user, or a local file path exposed in the current Codex session.
+Input: one audio attachment uploaded by the user, or a local file path exposed in the current Agent session.
 
 Output:
 
@@ -22,15 +22,33 @@ Default destination inside the configured Obsidian vault:
 
 The vault path must be provided by `--vault` or the `OBSIDIAN_VAULT` environment variable. See `README.md` for installation, model, and Obsidian setup instructions.
 
+## Runtime Assumptions
+
+This is a local-execution Agent Skill. It is portable across agents that support `SKILL.md`, but the full workflow requires:
+
+- local filesystem access, including access to the uploaded audio file path;
+- permission to run shell commands;
+- Python 3 and `ffmpeg` / `ffprobe`;
+- an Obsidian vault path provided by `--vault` or `OBSIDIAN_VAULT`.
+
+Before running any command, set `SKILL_DIR` to the installed skill root: the directory that contains this `SKILL.md`. Do not assume a Codex-specific, Claude-specific, or global skills path. Examples:
+
+```bash
+SKILL_DIR="/path/to/installed/妙计.Skill"
+cd "$SKILL_DIR"
+```
+
+All commands below are relative to `SKILL_DIR`.
+
 ## Workflow
 
-1. Locate the uploaded audio attachment path in the current Codex session.
+1. Locate the uploaded audio attachment path in the current Agent session.
 2. If no actual local path is available, stop and ask the user to re-upload the file or provide a local path. Do not guess attachment paths.
 3. Run the local FunASR transcription script.
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" \
-  "$HOME/.codex/skills/妙计.Skill/scripts/transcribe_audio_funasr.py" \
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/transcribe_audio_funasr.py \
   "/path/to/uploaded-audio" \
   --out-dir "/tmp/miaoji-skill-funasr"
 ```
@@ -66,21 +84,23 @@ Use FunASR as the default ASR backend for this skill.
 Before first use, check dependencies without guessing:
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" \
-  "$HOME/.codex/skills/妙计.Skill/scripts/check_funasr_dependencies.py"
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/check_funasr_dependencies.py
 ```
 
 If `.venv` does not exist, create the skill-local environment first:
 
 ```bash
-python3 -m venv "$HOME/.codex/skills/妙计.Skill/.venv"
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" -m pip install --upgrade pip setuptools wheel
+cd "$SKILL_DIR"
+python3 -m venv .venv
+".venv/bin/python" -m pip install --upgrade pip setuptools wheel
 ```
 
 If dependencies are missing, report the missing packages and ask before installing. Typical packages are:
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" -m pip install torch torchaudio funasr modelscope
+cd "$SKILL_DIR"
+".venv/bin/python" -m pip install torch torchaudio funasr modelscope
 ```
 
 The FunASR script defaults to:
@@ -95,16 +115,16 @@ The FunASR script defaults to:
 The exact ModelScope model IDs live in `config/models.json`. To pre-download models before first transcription:
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" \
-  "$HOME/.codex/skills/妙计.Skill/scripts/download_models.py"
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/download_models.py
 ```
 
 To place models under the local ignored `models/` directory:
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" \
-  "$HOME/.codex/skills/妙计.Skill/scripts/download_models.py" \
-  --models-dir "$HOME/.codex/skills/妙计.Skill/models"
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/download_models.py \
+  --models-dir "models"
 ```
 
 The FunASR script records timing breakdowns in `*.funasr.transcript.json` under `timings`.
@@ -112,8 +132,8 @@ The FunASR script records timing breakdowns in `*.funasr.transcript.json` under 
 For faster drafts where speaker diarization is not needed, run:
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" \
-  "$HOME/.codex/skills/妙计.Skill/scripts/transcribe_audio_funasr.py" \
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/transcribe_audio_funasr.py \
   "/path/to/uploaded-audio" \
   --out-dir "/tmp/miaoji-skill-funasr" \
   --disable-speaker-diarization
@@ -126,8 +146,8 @@ When `sentence_info` contains speaker IDs, preserve every distinct speaker ID in
 Use the finalizer after ASR succeeds:
 
 ```bash
-"$HOME/.codex/skills/妙计.Skill/.venv/bin/python" \
-  "$HOME/.codex/skills/妙计.Skill/scripts/finalize_to_obsidian.py" \
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/finalize_to_obsidian.py \
   "/tmp/miaoji-skill-funasr/recording.funasr.transcript.json" \
   --source-audio "/path/to/uploaded-audio.m4a" \
   --vault "$OBSIDIAN_VAULT" \
