@@ -1,0 +1,17 @@
+{
+  "default_vault_name": "ObsidianVault",
+  "default_vault_path": "${OBSIDIAN_VAULT}",
+  "default_note_folder": "40 Resources/录音转写",
+  "default_audio_folder": "40 Resources/附件/录音原件",
+  "asr_provider": "FunASR",
+  "language": "zh",
+  "audio_format": "mp3",
+  "funasr": {
+    "asr_model": "paraformer-zh",
+    "vad_model": "fsmn-vad",
+    "punc_model": "ct-punc",
+    "spk_model": "cam++",
+    "device": "cpu",
+    "batch_size_s": 300
+  }
+}

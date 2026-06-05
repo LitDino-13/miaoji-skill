@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local ASR/model artifacts
+models/
+modelscope/
+.cache/
+
+# Generated transcripts and temporary runs
+*.funasr.transcript.json
+*.funasr.transcript.md
+cloud-runs/
+out/
+tmp/
+
+# Never commit local secrets or personal env files
+.env
+*.pem
+*.key
