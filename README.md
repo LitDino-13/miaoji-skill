@@ -2,7 +2,7 @@
 
 模仿飞书妙记，做了一个给 Obsidian 用的「妙计」。
 
-它不是会议软件，也不是云端转写服务，而是一个本地 Codex Skill：你把录音发给 Agent，Agent 调用本地 FunASR 转写，再把内容整理成 Obsidian 里的逐字稿和智能摘要。
+它不是会议软件，也不是云端转写服务，而是一个本地 Agent Skill：你把录音发给 Agent，Agent 调用本地 FunASR 转写，再把内容整理成 Obsidian 里的逐字稿和智能摘要。
 
 适合这些场景：
 
@@ -13,22 +13,26 @@
 
 ## 安装
 
-这是一个 Codex Skill。最简单的安装方式：把下面这段话直接复制给你的 Codex / Agent，让它帮你安装。
+这是一个 Agent Skill，不只限于 Codex。只要你的 Agent 支持 `SKILL.md` 格式，就可以安装。
+
+最简单的安装方式：把下面这段话直接复制给你的 Agent，让它根据自己的运行环境安装。
 
 ```text
-请帮我安装这个 Codex Skill：
+请帮我安装这个 Agent Skill：
 
 GitHub 仓库：https://github.com/LitDino-13/miaoji-skill
-安装路径：仓库根目录
+Skill 位置：仓库根目录，也就是包含 SKILL.md 的目录
 安装名称：妙计.Skill
 
-请使用本地 Codex 的 skill installer 安装：
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo LitDino-13/miaoji-skill --path . --name "妙计.Skill"
+请按你当前 Agent 支持的方式安装：
+1. 如果你有原生的 skill installer，请用 GitHub 仓库安装，并指定 path 为仓库根目录。
+2. 如果没有原生安装器，请把这个仓库 clone 或下载到当前 Agent 的 skills 目录，目录名设为「妙计.Skill」。
+3. 安装后请确认「妙计.Skill/SKILL.md」存在。
 
-安装完成后，请提醒我重启 Codex，让新 skill 生效。
+安装完成后，请提醒我重启或刷新当前 Agent，让新 skill 生效。
 ```
 
-如果你想自己在终端安装，可以运行：
+如果你使用的是 Codex，也可以自己在终端运行：
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
@@ -37,7 +41,14 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
   --name "妙计.Skill"
 ```
 
-安装后重启 Codex，使新 skill 生效。
+其他 Agent 的常见安装思路：
+
+- 通用 Agent Skills 目录：安装到 `~/.agents/skills/妙计.Skill`。
+- Codex：安装到 `~/.codex/skills/妙计.Skill`。
+- Claude Code：安装到 `~/.claude/skills/妙计.Skill`。
+- 其他 Agent：查看该 Agent 的 skills / capabilities / extensions 文档，把整个仓库根目录作为一个 skill 安装。
+
+安装后重启或刷新你的 Agent，使新 skill 生效。
 
 安装后可以这样调用：
 
