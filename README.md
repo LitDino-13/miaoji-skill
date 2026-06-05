@@ -1,10 +1,34 @@
 # 妙计.Skill
 
-将本地录音文件转写为 Obsidian 笔记的 Codex Skill。
+模仿飞书妙记，做了一个给 Obsidian 用的「妙计」。
+
+它不是会议软件，也不是云端转写服务，而是一个本地 Codex Skill：你把录音发给 Agent，Agent 调用本地 FunASR 转写，再把内容整理成 Obsidian 里的逐字稿和智能摘要。
+
+适合这些场景：
+
+- 面试录音复盘
+- 会议录音整理
+- 手机录音沉淀到知识库
+- 把一段长音频变成可检索、可回听、可行动的 Markdown 笔记
 
 ## 安装
 
-这是一个 Codex Skill。安装到本地 Codex：
+这是一个 Codex Skill。最简单的安装方式：把下面这段话直接复制给你的 Codex / Agent，让它帮你安装。
+
+```text
+请帮我安装这个 Codex Skill：
+
+GitHub 仓库：https://github.com/LitDino-13/miaoji-skill
+安装路径：仓库根目录
+安装名称：妙计.Skill
+
+请使用本地 Codex 的 skill installer 安装：
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo LitDino-13/miaoji-skill --path . --name "妙计.Skill"
+
+安装完成后，请提醒我重启 Codex，让新 skill 生效。
+```
+
+如果你想自己在终端安装，可以运行：
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
@@ -15,13 +39,15 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 
 安装后重启 Codex，使新 skill 生效。
 
-调用方式：
+安装后可以这样调用：
 
 ```text
 Use $妙计.Skill to transcribe this audio into my Obsidian vault.
 ```
 
-这个 skill 的默认链路是：
+## 它会做什么
+
+妙计.Skill 的默认链路是：
 
 1. 用户把音频文件发给 Agent，或提供本地音频路径。
 2. Agent 调用本地 FunASR 完成语音识别。
