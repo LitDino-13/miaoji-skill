@@ -2,6 +2,25 @@
 
 将本地录音文件转写为 Obsidian 笔记的 Codex Skill。
 
+## 安装
+
+这是一个 Codex Skill。安装到本地 Codex：
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo LitDino-13/voice-to-obsidian \
+  --path . \
+  --name voice-to-obsidian
+```
+
+安装后重启 Codex，使新 skill 生效。
+
+调用方式：
+
+```text
+Use $voice-to-obsidian to transcribe this audio into my Obsidian vault.
+```
+
 这个 skill 的默认链路是：
 
 1. 用户把音频文件发给 Agent，或提供本地音频路径。
