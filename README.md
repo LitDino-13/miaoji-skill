@@ -13,6 +13,8 @@
 
 当前版本只规定本地 FunASR 流程，不包含云端常驻服务。
 
+模型权重不直接提交到 Git 仓库。默认模型总量约 2GB，直接提交会让仓库难以 clone 和维护，也可能触发 GitHub 单文件限制。仓库提供 `config/models.json` 和 `scripts/download_models.py`，用于在安装后下载安装到本地。
+
 ## 前置依赖
 
 ### 系统依赖
@@ -56,7 +58,21 @@ python3 -m venv .venv
 
 默认使用 FunASR 自动下载 ModelScope 模型。首次运行会下载模型，之后复用本地缓存。
 
-默认模型配置在 `config/defaults.json`：
+也可以在第一次转写前显式下载模型：
+
+```bash
+.venv/bin/python scripts/download_models.py
+```
+
+如果希望把模型下载到当前仓库的 `models/` 目录，便于后续离线使用：
+
+```bash
+.venv/bin/python scripts/download_models.py --models-dir ./models
+```
+
+`models/` 已被 `.gitignore` 排除，不会提交到公开仓库。
+
+默认模型配置在 `config/defaults.json`，精确 ModelScope 模型 ID 记录在 `config/models.json`：
 
 ```json
 {
@@ -80,6 +96,15 @@ python3 -m venv .venv
 - `fsmn-vad`：语音活动检测，用于切分有效语音片段。
 - `ct-punc`：标点恢复模型。
 - `cam++`：说话人识别模型，用于生成 `Speaker N`。
+
+当前模型清单：
+
+```text
+iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch
+iic/speech_fsmn_vad_zh-cn-16k-common-pytorch
+iic/punc_ct-transformer_cn-en-common-vocab471067-large
+iic/speech_campplus_sv_zh-cn_16k-common
+```
 
 说话人识别可关闭：
 
@@ -267,14 +292,16 @@ export AUDIO_TO_OBSIDIAN_SECRET_PATTERNS="secret1,secret2"
 
 ```bash
 python3 -m py_compile scripts/check_funasr_dependencies.py
+python3 -m py_compile scripts/download_models.py
 python3 -m py_compile scripts/transcribe_audio_funasr.py
 python3 -m py_compile scripts/finalize_to_obsidian.py
 ```
 
 端到端验收：
 
-1. 一段短音频可以生成 `*.funasr.transcript.json`。
-2. `finalize_to_obsidian.py` 可以写入两篇 Markdown。
-3. Obsidian 中只生成一个 MP3 音频附件。
-4. frontmatter 不含模型名、provider、backend 字段。
-5. 笔记中不含密钥、本地私钥路径或未确认个人结论。
+1. `scripts/download_models.py` 可以下载或确认所需模型。
+2. 一段短音频可以生成 `*.funasr.transcript.json`。
+3. `finalize_to_obsidian.py` 可以写入两篇 Markdown。
+4. Obsidian 中只生成一个 MP3 音频附件。
+5. frontmatter 不含模型名、provider、backend 字段。
+6. 笔记中不含密钥、本地私钥路径或未确认个人结论。

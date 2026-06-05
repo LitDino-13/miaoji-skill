@@ -1,0 +1,25 @@
+{
+  "provider": "ModelScope",
+  "models": {
+    "asr": {
+      "alias": "paraformer-zh",
+      "model_id": "iic/speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch",
+      "purpose": "Chinese automatic speech recognition"
+    },
+    "vad": {
+      "alias": "fsmn-vad",
+      "model_id": "iic/speech_fsmn_vad_zh-cn-16k-common-pytorch",
+      "purpose": "Voice activity detection"
+    },
+    "punctuation": {
+      "alias": "ct-punc",
+      "model_id": "iic/punc_ct-transformer_cn-en-common-vocab471067-large",
+      "purpose": "Chinese and English punctuation restoration"
+    },
+    "speaker": {
+      "alias": "cam++",
+      "model_id": "iic/speech_campplus_sv_zh-cn_16k-common",
+      "purpose": "Speaker embedding and speaker diarization support"
+    }
+  }
+}

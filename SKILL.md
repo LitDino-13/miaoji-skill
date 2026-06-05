@@ -46,12 +46,15 @@ For open-source distribution, keep these files as the public contract:
 - `README.md`: user-facing setup, model, configuration, Obsidian, and safety instructions.
 - `SKILL.md`: agent-facing workflow and behavior rules.
 - `config/defaults.json`: portable default configuration. Do not put personal vault paths or secrets here.
+- `config/models.json`: exact ModelScope model IDs required by the skill.
+- `scripts/download_models.py`: one-command model bootstrapper.
 - `.gitignore`: excludes `.venv`, model cache, generated transcripts, keys, and local env files.
 
 Do not publish:
 
 - `.venv/`
 - ModelScope cache directories
+- Downloaded model weight directories such as `models/`
 - Real audio files
 - Generated transcripts or summaries
 - API keys, SSH keys, `.env`, or personal vault paths
@@ -88,6 +91,21 @@ The FunASR script defaults to:
 - Speaker model: `cam++`
 - Device: `cpu`
 - Batch size: `300` seconds
+
+The exact ModelScope model IDs live in `config/models.json`. To pre-download models before first transcription:
+
+```bash
+"$HOME/.codex/skills/voice-to-obsidian/.venv/bin/python" \
+  "$HOME/.codex/skills/voice-to-obsidian/scripts/download_models.py"
+```
+
+To place models under the local ignored `models/` directory:
+
+```bash
+"$HOME/.codex/skills/voice-to-obsidian/.venv/bin/python" \
+  "$HOME/.codex/skills/voice-to-obsidian/scripts/download_models.py" \
+  --models-dir "$HOME/.codex/skills/voice-to-obsidian/models"
+```
 
 The FunASR script records timing breakdowns in `*.funasr.transcript.json` under `timings`.
 
