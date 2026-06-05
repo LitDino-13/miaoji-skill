@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download the ModelScope models required by 妙计·Skill."""
+"""Download the ModelScope models required by 妙计.Skill."""
 
 from __future__ import annotations
 

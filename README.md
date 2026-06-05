@@ -1,4 +1,4 @@
-# 妙计·Skill
+# 妙计.Skill
 
 将本地录音文件转写为 Obsidian 笔记的 Codex Skill。
 
@@ -10,7 +10,7 @@
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
   --repo LitDino-13/miaoji-skill \
   --path . \
-  --name "妙计·Skill"
+  --name "妙计.Skill"
 ```
 
 安装后重启 Codex，使新 skill 生效。
@@ -18,7 +18,7 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 调用方式：
 
 ```text
-Use $妙计·Skill to transcribe this audio into my Obsidian vault.
+Use $妙计.Skill to transcribe this audio into my Obsidian vault.
 ```
 
 这个 skill 的默认链路是：
@@ -59,7 +59,7 @@ brew install ffmpeg
 建议在 skill 目录内创建独立虚拟环境：
 
 ```bash
-cd ~/.codex/skills/妙计·Skill
+cd ~/.codex/skills/妙计.Skill
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip setuptools wheel
 .venv/bin/python -m pip install torch torchaudio funasr modelscope

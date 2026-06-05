@@ -1,6 +1,6 @@
 interface:
-  display_name: "妙计·Skill"
+  display_name: "妙计.Skill"
   short_description: "Transcribe uploaded audio into Obsidian transcript and summary notes"
-  default_prompt: "Use $妙计·Skill to transcribe this uploaded audio file locally with FunASR, then save transcript and intelligent-summary Markdown notes into the configured Obsidian vault."
+  default_prompt: "Use $妙计.Skill to transcribe this uploaded audio file locally with FunASR, then save transcript and intelligent-summary Markdown notes into the configured Obsidian vault."
 policy:
   allow_implicit_invocation: true
