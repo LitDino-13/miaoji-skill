@@ -1,4 +1,4 @@
-# Voice to Obsidian
+# 妙计·Skill
 
 将本地录音文件转写为 Obsidian 笔记的 Codex Skill。
 
@@ -8,9 +8,9 @@
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo LitDino-13/voice-to-obsidian \
+  --repo LitDino-13/miaoji-skill \
   --path . \
-  --name voice-to-obsidian
+  --name "妙计·Skill"
 ```
 
 安装后重启 Codex，使新 skill 生效。
@@ -18,7 +18,7 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 调用方式：
 
 ```text
-Use $voice-to-obsidian to transcribe this audio into my Obsidian vault.
+Use $妙计·Skill to transcribe this audio into my Obsidian vault.
 ```
 
 这个 skill 的默认链路是：
@@ -59,7 +59,7 @@ brew install ffmpeg
 建议在 skill 目录内创建独立虚拟环境：
 
 ```bash
-cd ~/.codex/skills/voice-to-obsidian
+cd ~/.codex/skills/妙计·Skill
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip setuptools wheel
 .venv/bin/python -m pip install torch torchaudio funasr modelscope
@@ -129,7 +129,7 @@ iic/speech_campplus_sv_zh-cn_16k-common
 
 ```bash
 .venv/bin/python scripts/transcribe_audio_funasr.py "/path/to/audio.m4a" \
-  --out-dir "/tmp/voice-to-obsidian-funasr" \
+  --out-dir "/tmp/miaoji-skill-funasr" \
   --disable-speaker-diarization
 ```
 
@@ -167,7 +167,7 @@ finalizer 会把源音频转换为一个 MP3，并写入音频附件目录。逐
 
 ```bash
 .venv/bin/python scripts/transcribe_audio_funasr.py "/path/to/audio.m4a" \
-  --out-dir "/tmp/voice-to-obsidian-funasr"
+  --out-dir "/tmp/miaoji-skill-funasr"
 ```
 
 输出：
@@ -179,7 +179,7 @@ finalizer 会把源音频转换为一个 MP3，并写入音频附件目录。逐
 
 ```bash
 .venv/bin/python scripts/finalize_to_obsidian.py \
-  "/tmp/voice-to-obsidian-funasr/audio.funasr.transcript.json" \
+  "/tmp/miaoji-skill-funasr/audio.funasr.transcript.json" \
   --source-audio "/path/to/audio.m4a" \
   --vault "$OBSIDIAN_VAULT" \
   --title "录音标题" \

@@ -114,7 +114,7 @@ def main() -> None:
     total_started = time.perf_counter()
     parser = argparse.ArgumentParser(description="Transcribe local audio with FunASR speaker diarization.")
     parser.add_argument("audio_path")
-    parser.add_argument("--out-dir", default="/tmp/voice-to-obsidian-funasr")
+    parser.add_argument("--out-dir", default="/tmp/miaoji-skill-funasr")
     parser.add_argument("--model", default="paraformer-zh")
     parser.add_argument("--vad-model", default="fsmn-vad")
     parser.add_argument("--punc-model", default="ct-punc")
