@@ -64,6 +64,7 @@ For open-source distribution, keep these files as the public contract:
 - `README.md`: user-facing setup, model, configuration, Obsidian, and safety instructions.
 - `SKILL.md`: agent-facing workflow and behavior rules.
 - `config/defaults.json`: portable default configuration. Do not put personal vault paths or secrets here.
+- `.env.example`: example local environment variables. Users may copy it locally, but scripts only read exported environment variables.
 - `config/models.json`: exact ModelScope model IDs required by the skill.
 - `scripts/download_models.py`: one-command model bootstrapper.
 - `scripts/install_obsidian_plugin.py`: installs the bundled Obsidian timestamp playback plugin into a vault.
@@ -181,6 +182,12 @@ cd "$SKILL_DIR"
 python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT"
 ```
 
+If `OBSIDIAN_VAULT` is exported in the current runtime environment, `--vault` can be omitted:
+
+```bash
+python3 scripts/install_obsidian_plugin.py
+```
+
 Use `--overwrite` only when the user explicitly wants to replace an existing installed plugin:
 
 ```bash
@@ -188,6 +195,8 @@ python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT" --overwrite
 ```
 
 After installation, the user must enable `Audio Transcript Jumper` in Obsidian Community plugins.
+
+Do not assume the plugin is already installed just because the skill repo was installed. The repo contains the distributable plugin files under `obsidian-plugin/audio-transcript-jumper/`; `scripts/install_obsidian_plugin.py` copies those files into the user's selected vault at `.obsidian/plugins/audio-transcript-jumper/`. Obsidian still requires the user to enable the plugin manually.
 
 Plugin behavior:
 

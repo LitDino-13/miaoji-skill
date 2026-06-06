@@ -181,11 +181,21 @@ iic/speech_campplus_sv_zh-cn_16k-common
 
 ## Obsidian 配置
 
-必须提供 Obsidian vault 路径。推荐使用环境变量：
+必须提供 Obsidian vault 路径。这个路径不应该写死在仓库里，每个使用者都要配置成自己的本地 vault。
+
+推荐方式是在当前 shell 或 Agent 运行环境里导出环境变量：
 
 ```bash
 export OBSIDIAN_VAULT="/absolute/path/to/your/ObsidianVault"
 ```
+
+仓库提供了一个示例文件：
+
+```bash
+cp .env.example .env
+```
+
+然后把 `.env` 里的路径改成自己的 vault。注意：脚本不会自动读取 `.env` 文件；你需要让自己的 Agent、shell、任务运行器或启动脚本把这些变量导出到运行环境中。
 
 默认写入位置：
 
@@ -197,6 +207,24 @@ export OBSIDIAN_VAULT="/absolute/path/to/your/ObsidianVault"
 
 ```text
 40 Resources/附件/录音原件/
+```
+
+如果你想改成自己的目录，可以用环境变量：
+
+```bash
+export MIAOJI_NOTE_FOLDER="40 Resources/录音转写"
+export MIAOJI_AUDIO_FOLDER="40 Resources/附件/录音原件"
+```
+
+也可以在写入时直接传参，命令行参数优先级更高：
+
+```bash
+.venv/bin/python scripts/finalize_to_obsidian.py \
+  "/tmp/miaoji-skill-funasr/audio.funasr.transcript.json" \
+  --source-audio "/path/to/audio.m4a" \
+  --vault "$OBSIDIAN_VAULT" \
+  --note-folder "40 Resources/录音转写" \
+  --audio-folder "40 Resources/附件/录音原件"
 ```
 
 finalizer 会把源音频转换为一个 MP3，并写入音频附件目录。逐字稿笔记中会嵌入这个 MP3：
@@ -213,6 +241,13 @@ finalizer 会把源音频转换为一个 MP3，并写入音频附件目录。逐
 obsidian-plugin/audio-transcript-jumper/
 ```
 
+插件不会被自动安装进每个用户的 Obsidian，因为每个人的 vault 路径不同，Obsidian 也要求用户自己确认并启用社区插件。正确流程是：
+
+1. 先安装这个 Agent Skill。
+2. 配置自己的 `OBSIDIAN_VAULT`。
+3. 运行插件安装脚本，把仓库内置插件复制到自己的 vault。
+4. 在 Obsidian 里手动启用插件。
+
 这个插件会识别逐字稿中的独立时间戳行：
 
 ```markdown
@@ -227,6 +262,12 @@ OBSIDIAN_VAULT="/absolute/path/to/your/ObsidianVault"
 
 cd "$SKILL_DIR"
 python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT"
+```
+
+如果已经设置了 `OBSIDIAN_VAULT`，也可以省略 `--vault`：
+
+```bash
+python3 scripts/install_obsidian_plugin.py
 ```
 
 如果已安装过旧版本，需要替换：

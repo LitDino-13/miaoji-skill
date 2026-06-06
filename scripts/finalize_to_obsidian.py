@@ -17,8 +17,8 @@ from typing import Any
 
 
 DEFAULT_VAULT = Path(os.environ.get("OBSIDIAN_VAULT", "~/ObsidianVault")).expanduser()
-DEFAULT_NOTE_FOLDER = Path("40 Resources/录音转写")
-DEFAULT_AUDIO_FOLDER = Path("40 Resources/附件/录音原件")
+DEFAULT_NOTE_FOLDER = Path(os.environ.get("MIAOJI_NOTE_FOLDER", "40 Resources/录音转写"))
+DEFAULT_AUDIO_FOLDER = Path(os.environ.get("MIAOJI_AUDIO_FOLDER", "40 Resources/附件/录音原件"))
 FILLER_WORDS = {"嗯", "呃", "啊", "哎", "好", "对", "好的", "好的好的", "嗯嗯", "hello", "你好"}
 TECH_REPLACEMENTS = [
     ("复 conu i", "ComfyUI"),

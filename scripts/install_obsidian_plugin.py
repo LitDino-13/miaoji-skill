@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 from pathlib import Path
 
@@ -17,8 +18,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--vault",
-        required=True,
-        help="Absolute path to the target Obsidian vault.",
+        default=os.environ.get("OBSIDIAN_VAULT"),
+        help="Absolute path to the target Obsidian vault. Defaults to OBSIDIAN_VAULT.",
     )
     parser.add_argument(
         "--overwrite",
@@ -30,6 +31,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if not args.vault:
+        raise SystemExit("Missing vault path. Pass --vault or set OBSIDIAN_VAULT.")
+
     skill_dir = Path(__file__).resolve().parents[1]
     source_dir = skill_dir / "obsidian-plugin" / PLUGIN_ID
     vault_dir = Path(args.vault).expanduser().resolve()
