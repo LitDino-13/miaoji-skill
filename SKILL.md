@@ -66,6 +66,8 @@ For open-source distribution, keep these files as the public contract:
 - `config/defaults.json`: portable default configuration. Do not put personal vault paths or secrets here.
 - `config/models.json`: exact ModelScope model IDs required by the skill.
 - `scripts/download_models.py`: one-command model bootstrapper.
+- `scripts/install_obsidian_plugin.py`: installs the bundled Obsidian timestamp playback plugin into a vault.
+- `obsidian-plugin/audio-transcript-jumper/`: bundled Obsidian plugin for clickable transcript timestamps.
 - `.gitignore`: excludes `.venv`, model cache, generated transcripts, keys, and local env files.
 
 Do not publish:
@@ -76,6 +78,7 @@ Do not publish:
 - Real audio files
 - Generated transcripts or summaries
 - API keys, SSH keys, `.env`, or personal vault paths
+- User vault `.obsidian/plugins/` directories; only publish the bundled plugin under `obsidian-plugin/audio-transcript-jumper/`.
 
 ## FunASR Local ASR
 
@@ -168,6 +171,32 @@ The finalizer handles:
 - Keeping human-facing frontmatter only.
 
 Use `--overwrite` only when the user explicitly wants to replace existing notes.
+
+## Obsidian Timestamp Plugin
+
+The transcript notes are valid Markdown without any plugin. For clickable timestamp playback, install the bundled plugin into the target vault:
+
+```bash
+cd "$SKILL_DIR"
+python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT"
+```
+
+Use `--overwrite` only when the user explicitly wants to replace an existing installed plugin:
+
+```bash
+python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT" --overwrite
+```
+
+After installation, the user must enable `Audio Transcript Jumper` in Obsidian Community plugins.
+
+Plugin behavior:
+
+- recognizes standalone `Speaker N MM:SS` and `Speaker N HH:MM:SS` paragraphs;
+- renders `Speaker N` with a rotating six-color speaker palette;
+- renders timestamps as blue buttons;
+- controls the same embedded audio file used by the transcript note;
+- creates one stable top audio player for the current note instead of one audio element per timestamp;
+- auto-pauses playback when the active document changes.
 
 ## Note Shape
 

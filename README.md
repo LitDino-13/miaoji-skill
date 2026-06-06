@@ -205,6 +205,51 @@ finalizer 会把源音频转换为一个 MP3，并写入音频附件目录。逐
 ![[录音标题.mp3]]
 ```
 
+### 安装配套 Obsidian 插件
+
+妙计.Skill 生成的逐字稿本身是普通 Markdown；如果希望像“飞书妙记”一样点击时间戳并跳转播放，需要额外安装仓库内置的 Obsidian 插件：
+
+```text
+obsidian-plugin/audio-transcript-jumper/
+```
+
+这个插件会识别逐字稿中的独立时间戳行：
+
+```markdown
+Speaker 0 00:00
+```
+
+安装到你的 vault：
+
+```bash
+SKILL_DIR="/path/to/installed/妙计.Skill"
+OBSIDIAN_VAULT="/absolute/path/to/your/ObsidianVault"
+
+cd "$SKILL_DIR"
+python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT"
+```
+
+如果已安装过旧版本，需要替换：
+
+```bash
+python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT" --overwrite
+```
+
+安装后在 Obsidian 中打开：
+
+```text
+Settings -> Community plugins -> Installed plugins -> Audio Transcript Jumper
+```
+
+然后启用插件。启用后：
+
+- 逐字稿中的 `Speaker N MM:SS` 会渲染成蓝色时间戳按钮。
+- 点击时间戳会让当前笔记顶部的同一个音频条跳转到对应时间点并继续播放。
+- 切换到其他笔记或其他文件时，当前播放会自动暂停。
+- `Speaker 0` 到 `Speaker 5` 会自动分配不同颜色；超过 6 个说话人时颜色循环复用。
+
+如果不安装这个插件，妙计.Skill 仍然可以正常生成逐字稿和智能摘要，只是时间戳不会自动控制音频播放。
+
 ## 使用方式
 
 ### 1. 转写音频
@@ -326,13 +371,20 @@ Speaker 0 00:00
 
 ## 可选 Obsidian 插件
 
-如果希望点击逐字稿时间戳后跳转到上方音频条播放，需要安装配套 Obsidian 插件。
+如果希望点击逐字稿时间戳后跳转到上方音频条播放，需要安装配套 Obsidian 插件。插件已经随仓库提供：
+
+```text
+obsidian-plugin/audio-transcript-jumper/
+scripts/install_obsidian_plugin.py
+```
 
 插件约定：
 
 - 识别独立段落中的 `Speaker N MM:SS`。
 - 点击时间戳按钮后，控制当前笔记内嵌入的同一个音频播放器。
 - 不应该为每个时间戳创建新的独立播放器。
+- 当鼠标没有移动到顶部播放器区域时，播放器保持透明；鼠标悬停时显示。
+- 切换到其他文档时，当前音频自动暂停。
 
 没有插件时，笔记仍然可用，只是时间戳不能自动跳转播放。
 
@@ -341,6 +393,7 @@ Speaker 0 00:00
 - 不要提交 `.venv/`。
 - 不要提交模型缓存。
 - 不要提交真实 Obsidian vault 路径。
+- 不要提交用户本地 `.obsidian/plugins/` 目录；只提交本仓库内 `obsidian-plugin/audio-transcript-jumper/` 的分发文件。
 - 不要提交 API key、SSH key、`.env`、`.pem`。
 - 不要把个人面试录音、逐字稿、摘要或生成结果放入公开仓库。
 - 如果需要防止生成笔记中出现已知秘密，可设置：
@@ -358,6 +411,7 @@ python3 -m py_compile scripts/check_funasr_dependencies.py
 python3 -m py_compile scripts/download_models.py
 python3 -m py_compile scripts/transcribe_audio_funasr.py
 python3 -m py_compile scripts/finalize_to_obsidian.py
+python3 -m py_compile scripts/install_obsidian_plugin.py
 ```
 
 端到端验收：
@@ -368,3 +422,4 @@ python3 -m py_compile scripts/finalize_to_obsidian.py
 4. Obsidian 中只生成一个 MP3 音频附件。
 5. frontmatter 不含模型名、provider、backend 字段。
 6. 笔记中不含密钥、本地私钥路径或未确认个人结论。
+7. 配套 Obsidian 插件可以复制到测试 vault，并包含 `manifest.json`、`main.js`、`styles.css`。
