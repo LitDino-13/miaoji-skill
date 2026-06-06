@@ -181,42 +181,39 @@ iic/speech_campplus_sv_zh-cn_16k-common
 
 ## Obsidian 配置
 
-必须提供 Obsidian vault 路径。这个路径不应该写死在仓库里，每个使用者都要配置成自己的本地 vault。
+### 1. 设置你的 vault 路径
 
-推荐方式是在当前 shell 或 Agent 运行环境里导出环境变量：
+每个人的 Obsidian vault 路径都不同，所以必须自己设置：
 
 ```bash
 export OBSIDIAN_VAULT="/absolute/path/to/your/ObsidianVault"
 ```
 
-仓库提供了一个示例文件：
+你也可以复制示例文件后修改：
 
 ```bash
 cp .env.example .env
 ```
 
-然后把 `.env` 里的路径改成自己的 vault。注意：脚本不会自动读取 `.env` 文件；你需要让自己的 Agent、shell、任务运行器或启动脚本把这些变量导出到运行环境中。
+`.env` 只是示例配置；运行脚本前，需要让你的 shell 或 Agent 真正导出这些环境变量。
 
-默认写入位置：
+### 2. 修改输出目录
+
+默认会写入：
 
 ```text
 40 Resources/录音转写/
-```
-
-默认音频附件位置：
-
-```text
 40 Resources/附件/录音原件/
 ```
 
-如果你想改成自己的目录，可以用环境变量：
+如果想换目录，设置：
 
 ```bash
-export MIAOJI_NOTE_FOLDER="40 Resources/录音转写"
-export MIAOJI_AUDIO_FOLDER="40 Resources/附件/录音原件"
+export MIAOJI_NOTE_FOLDER="your/transcript/folder"
+export MIAOJI_AUDIO_FOLDER="your/audio/folder"
 ```
 
-也可以在写入时直接传参，命令行参数优先级更高：
+也可以在写入时直接传参：
 
 ```bash
 .venv/bin/python scripts/finalize_to_obsidian.py \
@@ -227,48 +224,25 @@ export MIAOJI_AUDIO_FOLDER="40 Resources/附件/录音原件"
   --audio-folder "40 Resources/附件/录音原件"
 ```
 
-finalizer 会把源音频转换为一个 MP3，并写入音频附件目录。逐字稿笔记中会嵌入这个 MP3：
+finalizer 会把源音频转成一个 MP3，放进音频附件目录，并在逐字稿中嵌入：
 
 ```markdown
 ![[录音标题.mp3]]
 ```
 
-### 安装配套 Obsidian 插件
+### 3. 安装时间戳播放插件
 
-妙计.Skill 生成的逐字稿本身是普通 Markdown；如果希望像“飞书妙记”一样点击时间戳并跳转播放，需要额外安装仓库内置的 Obsidian 插件：
+逐字稿不用插件也能正常阅读。只有当你想点击时间戳并跳转播放音频时，才需要安装仓库内置的 Obsidian 插件：
 
 ```text
 obsidian-plugin/audio-transcript-jumper/
 ```
 
-插件不会被自动安装进每个用户的 Obsidian，因为每个人的 vault 路径不同，Obsidian 也要求用户自己确认并启用社区插件。正确流程是：
+它不会自动进入你的 Obsidian vault。你需要自己复制安装并启用：
 
-1. 先安装这个 Agent Skill。
-2. 配置自己的 `OBSIDIAN_VAULT`。
-3. 运行插件安装脚本，把仓库内置插件复制到自己的 vault。
-4. 在 Obsidian 里手动启用插件。
-
-这个插件会识别逐字稿中的独立时间戳行：
-
-```markdown
-Speaker 0 00:00
-```
-
-安装到你的 vault：
-
-```bash
-SKILL_DIR="/path/to/installed/妙计.Skill"
-OBSIDIAN_VAULT="/absolute/path/to/your/ObsidianVault"
-
-cd "$SKILL_DIR"
-python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT"
-```
-
-如果已经设置了 `OBSIDIAN_VAULT`，也可以省略 `--vault`：
-
-```bash
-python3 scripts/install_obsidian_plugin.py
-```
+1. 设置 `OBSIDIAN_VAULT`。
+2. 在 skill 目录运行 `python3 scripts/install_obsidian_plugin.py`。
+3. 打开 Obsidian，启用 `Audio Transcript Jumper`。
 
 如果已安装过旧版本，需要替换：
 
@@ -282,7 +256,7 @@ python3 scripts/install_obsidian_plugin.py --vault "$OBSIDIAN_VAULT" --overwrite
 Settings -> Community plugins -> Installed plugins -> Audio Transcript Jumper
 ```
 
-然后启用插件。启用后：
+启用后：
 
 - 逐字稿中的 `Speaker N MM:SS` 会渲染成蓝色时间戳按钮。
 - 点击时间戳会让当前笔记顶部的同一个音频条跳转到对应时间点并继续播放。
