@@ -1,8 +1,9 @@
 {
   "default_vault_name": "ObsidianVault",
   "default_vault_path": "${OBSIDIAN_VAULT}",
-  "default_note_folder": "40 Resources/录音转写",
-  "default_audio_folder": "40 Resources/附件/录音原件",
+  "default_source_folder": "40 Resources/源料库",
+  "default_note_folder": "40 Resources/源料库",
+  "default_audio_folder": "package/assets",
   "asr_provider": "FunASR",
   "language": "zh",
   "audio_format": "mp3",

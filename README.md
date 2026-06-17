@@ -63,9 +63,10 @@ Use $妙计.Skill to transcribe this audio into my Obsidian vault.
 1. 用户把音频文件发给 Agent，或提供本地音频路径。
 2. Agent 调用本地 FunASR 完成语音识别。
 3. 脚本输出结构化转写 JSON 和可读 Markdown。
-4. Agent 或 finalizer 将结果整理为两篇 Obsidian 笔记：
-   - `录音标题—逐字稿.md`
-   - `录音标题 - 智能摘要.md`
+4. Agent 或 finalizer 将结果整理为一个 Obsidian 资料包：
+   - `YYYY-MMDD-录音主题—Raw.md`
+   - `YYYY-MMDD-录音主题—逐字稿.md`
+   - `YYYY-MMDD-录音主题—Summary.md`
 
 当前版本只规定本地 FunASR 流程，不包含云端常驻服务。
 
@@ -202,15 +203,20 @@ cp .env.example .env
 默认会写入：
 
 ```text
-40 Resources/录音转写/
-40 Resources/附件/录音原件/
+40 Resources/源料库/
+  YYYY-MMDD-录音主题/
+    YYYY-MMDD-录音主题—Raw.md
+    YYYY-MMDD-录音主题—逐字稿.md
+    YYYY-MMDD-录音主题—Summary.md
+    assets/
+      YYYY-MMDD-录音主题.mp3
+      transcript.json
 ```
 
 如果想换目录，设置：
 
 ```bash
-export MIAOJI_NOTE_FOLDER="your/transcript/folder"
-export MIAOJI_AUDIO_FOLDER="your/audio/folder"
+export MIAOJI_SOURCE_FOLDER="your/source-library/folder"
 ```
 
 也可以在写入时直接传参：
@@ -220,11 +226,10 @@ export MIAOJI_AUDIO_FOLDER="your/audio/folder"
   "/tmp/miaoji-skill-funasr/audio.funasr.transcript.json" \
   --source-audio "/path/to/audio.m4a" \
   --vault "$OBSIDIAN_VAULT" \
-  --note-folder "40 Resources/录音转写" \
-  --audio-folder "40 Resources/附件/录音原件"
+  --source-folder "40 Resources/源料库"
 ```
 
-finalizer 会把源音频转成一个 MP3，放进音频附件目录，并在逐字稿中嵌入：
+finalizer 会把源音频转成一个 MP3，放进当前资料包的 `assets/` 目录，并在逐字稿中嵌入：
 
 ```markdown
 ![[录音标题.mp3]]
@@ -260,7 +265,8 @@ Settings -> Community plugins -> Installed plugins -> Audio Transcript Jumper
 
 - 逐字稿中的 `Speaker N MM:SS` 会渲染成蓝色时间戳按钮。
 - 点击时间戳会让当前笔记顶部的同一个音频条跳转到对应时间点并继续播放。
-- 切换到其他笔记或其他文件时，当前播放会自动暂停。
+- 顶部播放器右侧有关闭按钮，可手动停止播放并移除播放器。
+- 切换到其他笔记或其他文件时，当前播放会自动停止，顶部播放器会从页面移除。
 - `Speaker 0` 到 `Speaker 5` 会自动分配不同颜色；超过 6 个说话人时颜色循环复用。
 
 如果不安装这个插件，妙计.Skill 仍然可以正常生成逐字稿和智能摘要，只是时间戳不会自动控制音频播放。
@@ -286,10 +292,12 @@ Settings -> Community plugins -> Installed plugins -> Audio Transcript Jumper
   "/tmp/miaoji-skill-funasr/audio.funasr.transcript.json" \
   --source-audio "/path/to/audio.m4a" \
   --vault "$OBSIDIAN_VAULT" \
-  --title "录音标题" \
+  --title "录音主题" \
   --category "会议" \
   --tag "录音转写"
 ```
+
+`finalize_to_obsidian.py` 会把标题自动规范为 `YYYY-MMDD-主题`。日期来自 `--created`，默认使用当天日期；如果 `--title` 已经是 `YYYY-MMDD-主题` 格式，则不会重复添加日期前缀。
 
 默认不会覆盖已存在笔记。需要覆盖时显式加：
 
@@ -304,7 +312,7 @@ Settings -> Community plugins -> Installed plugins -> Audio Transcript Jumper
 文件名：
 
 ```text
-录音标题—逐字稿.md
+YYYY-MMDD-录音主题—逐字稿.md
 ```
 
 核心结构：
@@ -312,10 +320,10 @@ Settings -> Community plugins -> Installed plugins -> Audio Transcript Jumper
 ```markdown
 ---
 type: interview-transcript
-title: "录音标题—逐字稿"
+title: "YYYY-MMDD-录音主题—逐字稿"
 category: "会议"
 source_type: audio
-audio: "40 Resources/附件/录音原件/录音标题.mp3"
+audio: "40 Resources/源料库/YYYY-MMDD-录音主题/assets/YYYY-MMDD-录音主题.mp3"
 duration: "36:25"
 created: "2026-06-06"
 review_status: "已整理"
@@ -326,9 +334,9 @@ tags:
   - 录音转写
 ---
 
-# 录音标题—逐字稿
+# YYYY-MMDD-录音主题—逐字稿
 
-![[录音标题.mp3]]
+![[YYYY-MMDD-录音主题.mp3]]
 
 ## 智能纪要
 
@@ -353,6 +361,7 @@ Speaker 0 00:00
 
 - 保留所有 FunASR 返回的说话人编号。
 - 统一写作 `Speaker 0`、`Speaker 1`、`Speaker 2`。
+- 如果 ASR 没有返回说话人编号，统一写作 `Speaker 0`，并在 `## 说话人说明` 标注这是未知单一说话人占位。
 - 不把 `Speaker N` 自动替换成真实姓名，除非用户明确提供。
 - 如果最多 6 人发言，Obsidian 插件可为 `Speaker 0` 到 `Speaker 5` 分配不同颜色。
 - 超过 6 人时继续保留原始 `Speaker N`，颜色可以循环复用。
@@ -362,7 +371,7 @@ Speaker 0 00:00
 文件名：
 
 ```text
-录音标题 - 智能摘要.md
+YYYY-MMDD-录音主题—Summary.md
 ```
 
 核心结构：
@@ -399,7 +408,7 @@ scripts/install_obsidian_plugin.py
 - 点击时间戳按钮后，控制当前笔记内嵌入的同一个音频播放器。
 - 不应该为每个时间戳创建新的独立播放器。
 - 当鼠标没有移动到顶部播放器区域时，播放器保持透明；鼠标悬停时显示。
-- 切换到其他文档时，当前音频自动暂停。
+- 顶部播放器可以手动关闭；切换到其他文档时，当前音频自动停止并移除播放器。
 
 没有插件时，笔记仍然可用，只是时间戳不能自动跳转播放。
 
@@ -433,7 +442,7 @@ python3 -m py_compile scripts/install_obsidian_plugin.py
 
 1. `scripts/download_models.py` 可以下载或确认所需模型。
 2. 一段短音频可以生成 `*.funasr.transcript.json`。
-3. `finalize_to_obsidian.py` 可以写入两篇 Markdown。
+3. `finalize_to_obsidian.py` 可以写入 Raw、逐字稿、Summary 三篇 Markdown。
 4. Obsidian 中只生成一个 MP3 音频附件。
 5. frontmatter 不含模型名、provider、backend 字段。
 6. 笔记中不含密钥、本地私钥路径或未确认个人结论。

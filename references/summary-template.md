@@ -13,18 +13,26 @@ tags:
 {{tags}}
 ---
 
-# 智能纪要：{{title}}
+# 复盘 Summary：{{title}}
 
 > 录音主题：{{title}}  
 > 录音时间：{{recorded_time}}  
 > 逐字稿：[[{{transcript_note_title}}]]  
 > 音频文件：{{source_audio_link}}
 >
-> 智能纪要由 AI 基于转写文本整理，可能不准确，请结合原录音与逐字稿甄别后使用。
+> 本文是基于逐字稿人工重整后的复盘 Summary，用于沉淀结论、行动、风险和可复用经验。
+
+## 一句话结论
+
+{{one_sentence_conclusion}}
 
 ## 总结
 
 {{overall_summary}}
+
+## 复盘视角：真正沉淀了什么
+
+{{review_insights}}
 
 ## 后续计划
 

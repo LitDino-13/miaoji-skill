@@ -98,7 +98,7 @@ def write_outputs(out_dir: Path, payload: dict[str, Any]) -> dict[str, str]:
 
     for sent in payload["sentences"]:
         speaker = sent.get("speaker")
-        speaker_label = f"Speaker {speaker}" if speaker is not None else "Speaker unknown"
+        speaker_label = f"Speaker {speaker}" if speaker is not None else "Speaker 0"
         start = stamp_ms(sent.get("start"))
         end = stamp_ms(sent.get("end"))
         if start == "unknown" and end == "unknown":

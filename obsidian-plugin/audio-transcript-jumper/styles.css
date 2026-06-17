@@ -2,7 +2,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  padding: 0.45rem 0;
+  padding: 0.45rem 2.25rem 0.45rem 0;
   margin-bottom: 0.75rem;
   background: var(--background-primary);
   opacity: 0;
@@ -22,6 +22,35 @@
   display: block;
   width: 100%;
   min-height: 2rem;
+}
+
+.atj-stable-close {
+  appearance: none;
+  position: absolute;
+  top: 0.55rem;
+  right: 0.1rem;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.atj-stable-close:hover,
+.atj-stable-close:focus {
+  border-color: var(--background-modifier-border-hover);
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .markdown-preview-view audio.atj-source-audio {

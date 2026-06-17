@@ -20,12 +20,12 @@ module.exports = class AudioTranscriptJumperPlugin extends Plugin {
     });
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", () => {
-        window.setTimeout(() => this.pauseIfAudioLeftActiveLeaf("active-leaf-change"), 0);
+        window.setTimeout(() => this.stopIfAudioLeftActiveLeaf("active-leaf-change"), 0);
       })
     );
     this.registerEvent(
       this.app.workspace.on("file-open", (file) => {
-        this.pauseIfDifferentFileOpened(file);
+        this.stopIfDifferentFileOpened(file);
       })
     );
     this.registerMarkdownPostProcessor(async (container, context) => {
@@ -255,6 +255,16 @@ module.exports = class AudioTranscriptJumperPlugin extends Plugin {
       this.audioByResourcePath.delete(resolvedResourcePath);
     }
 
+    const stable = this.ensureStablePlayer(button, resolvedResourcePath);
+    if (stable && this.isUsableAudio(stable)) {
+      this.audioByResourcePath.set(resolvedResourcePath, stable);
+      this.logDebug("findAudio:stable-created", {
+        resolvedResourcePath,
+        audio: this.audioSnapshot(stable)
+      });
+      return stable;
+    }
+
     console.warn("Audio Transcript Jumper could not find rendered audio for", resolvedResourcePath);
     this.logDebug("findAudio:not-found", { resolvedResourcePath });
     return null;
@@ -335,6 +345,19 @@ module.exports = class AudioTranscriptJumperPlugin extends Plugin {
     audio.src = resourcePath;
     audio.preload = "metadata";
     audio.dataset.atjStablePlayer = "true";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "atj-stable-close";
+    closeButton.type = "button";
+    closeButton.setAttribute("aria-label", "关闭音频播放器");
+    closeButton.textContent = "×";
+    closeButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeStablePlayer(audio, "manual-close");
+    });
+
+    shell.appendChild(closeButton);
     shell.appendChild(audio);
 
     host.prepend(shell);
@@ -412,30 +435,32 @@ module.exports = class AudioTranscriptJumperPlugin extends Plugin {
     audio.dataset.atjBound = "true";
   }
 
-  pauseIfAudioLeftActiveLeaf(reason) {
-    if (!this.activeAudio || this.activeAudio.paused) return;
+  stopIfAudioLeftActiveLeaf(reason) {
+    this.removeStablePlayersOutsideActiveLeaf(reason);
+    if (!this.activeAudio) return;
     const activeLeafContent = this.getActiveLeafContent();
     if (activeLeafContent && activeLeafContent.contains(this.activeAudio)) return;
-    this.pauseActiveAudio(reason, {
+    this.stopActiveAudio(reason, {
       activeSourcePath: this.activeSourcePath,
       activeLeafContainsAudio: Boolean(activeLeafContent && activeLeafContent.contains(this.activeAudio))
     });
   }
 
-  pauseIfDifferentFileOpened(file) {
-    if (!this.activeAudio || this.activeAudio.paused || !this.activeSourcePath) return;
+  stopIfDifferentFileOpened(file) {
+    this.removeStablePlayersOutsideActiveLeaf("file-open");
+    if (!this.activeAudio || !this.activeSourcePath) return;
     const openedPath = file && file.path;
     if (!openedPath || openedPath === this.activeSourcePath) return;
-    this.pauseActiveAudio("file-open", {
+    this.stopActiveAudio("file-open", {
       openedPath,
       activeSourcePath: this.activeSourcePath
     });
   }
 
-  pauseActiveAudio(reason, details = {}) {
+  stopActiveAudio(reason, details = {}) {
     const audio = this.activeAudio;
     const button = this.activeButton;
-    this.logDebug("audio:auto-pause", {
+    this.logDebug("audio:auto-stop", {
       reason,
       ...details,
       audio: this.audioSnapshot(audio)
@@ -446,6 +471,51 @@ module.exports = class AudioTranscriptJumperPlugin extends Plugin {
     this.activeSourcePath = null;
     this.activeLeafContent = null;
     if (audio && !audio.paused) audio.pause();
+    this.removeStablePlayerForAudio(audio, reason);
+  }
+
+  closeStablePlayer(audio, reason = "manual-close") {
+    this.logDebug("stablePlayer:manual-close", {
+      reason,
+      audio: this.audioSnapshot(audio)
+    });
+    if (this.activeAudio === audio) {
+      if (this.activeButton) this.activeButton.removeClass("is-playing");
+      this.activeButton = null;
+      this.activeAudio = null;
+      this.activeSourcePath = null;
+      this.activeLeafContent = null;
+    }
+    if (audio && !audio.paused) audio.pause();
+    this.removeStablePlayerForAudio(audio, reason);
+  }
+
+  removeStablePlayerForAudio(audio, reason) {
+    if (!audio) return;
+    const shell = audio.closest(".atj-stable-player");
+    if (!shell) return;
+    this.logDebug("stablePlayer:remove-active", {
+      reason,
+      audio: this.audioSnapshot(audio)
+    });
+    for (const [resourcePath, cachedAudio] of Array.from(this.audioByResourcePath.entries())) {
+      if (cachedAudio === audio) this.audioByResourcePath.delete(resourcePath);
+    }
+    shell.remove();
+  }
+
+  removeStablePlayersOutsideActiveLeaf(reason) {
+    const activeLeafContent = this.getActiveLeafContent();
+    for (const shell of Array.from(this.app.workspace.containerEl.querySelectorAll(".atj-stable-player"))) {
+      if (activeLeafContent && activeLeafContent.contains(shell)) continue;
+      const audio = shell.querySelector("audio");
+      if (audio && !audio.paused) audio.pause();
+      this.logDebug("stablePlayer:remove-outside-active-leaf", {
+        reason,
+        audio: this.audioSnapshot(audio)
+      });
+      shell.remove();
+    }
   }
 
   getActiveLeafContent() {

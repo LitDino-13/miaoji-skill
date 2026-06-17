@@ -1,11 +1,11 @@
 ---
 name: 妙计.Skill
-description: Use when the user uploads or provides an audio recording and wants it transcribed with local FunASR, summarized briefly, and saved as Markdown notes in their Obsidian vault. Handles local attachment paths, speaker labels, audio playback files, and direct vault writes for audio transcript notes.
+description: Use when the user uploads or provides an audio recording and wants a high-quality transcript, speaker timestamps, review summary, and Obsidian source package.
 ---
 
 # 妙计.Skill
 
-Turn one uploaded audio recording into two Obsidian Markdown notes.
+Turn one uploaded audio recording into one Obsidian source package.
 
 ## Core Promise
 
@@ -13,12 +13,21 @@ Input: one audio attachment uploaded by the user, or a local file path exposed i
 
 Output:
 
-1. One transcript Markdown note containing metadata, embedded audio, speaker notes, and a cleaned Feishu Minutes-like transcript.
-2. One intelligent summary Markdown note containing a Feishu Minutes-like AI summary, action items, chapters, decisions, quotes, and links back to the transcript note.
+1. One Raw Markdown note indexing the original audio and ASR JSON.
+2. One transcript Markdown note containing metadata, embedded audio, speaker notes, and a cleaned Feishu Minutes-like transcript.
+3. One review-summary Markdown note containing a polished synthesis of the transcript: situation, core conclusions, action items, chapters, decisions, quotes, risks, and links back to the transcript note.
 
 Default destination inside the configured Obsidian vault:
 
-`40 Resources/录音转写`
+```text
+40 Resources/源料库/{YYYY-MMDD-topic}/
+  {YYYY-MMDD-topic}—Raw.md
+  {YYYY-MMDD-topic}—逐字稿.md
+  {YYYY-MMDD-topic}—Summary.md
+  assets/
+    {YYYY-MMDD-topic}.mp3
+    transcript.json
+```
 
 The vault path must be provided by `--vault` or the `OBSIDIAN_VAULT` environment variable. See `README.md` for installation, model, and Obsidian setup instructions.
 
@@ -44,7 +53,11 @@ All commands below are relative to `SKILL_DIR`.
 
 1. Locate the uploaded audio attachment path in the current Agent session.
 2. If no actual local path is available, stop and ask the user to re-upload the file or provide a local path. Do not guess attachment paths.
-3. Run the local FunASR transcription script.
+3. Decide whether this run is a high-quality run or an explicit fast draft.
+   - Default to a high-quality run.
+   - Use a fast draft only when the user explicitly asks for speed over quality or explicitly says speaker diarization is not needed.
+   - Do not silently use `--disable-speaker-diarization` for normal user requests.
+4. Run the local FunASR transcription script.
 
 ```bash
 cd "$SKILL_DIR"
@@ -53,9 +66,16 @@ cd "$SKILL_DIR"
   --out-dir "/tmp/miaoji-skill-funasr"
 ```
 
-5. Finalize the ASR output into Obsidian notes with `scripts/finalize_to_obsidian.py`.
-6. If the user expects a polished intelligent summary, read the generated transcript note and refine the summary note manually as the Agent. The script creates a complete rule-based draft; it does not replace the Agent's language understanding.
-7. Verify both Markdown files exist, the MP3 exists, and no API key or backend-only metadata is written into note frontmatter.
+5. For long recordings or when the single-pass output loses speaker/timestamp fidelity, rerun with `scripts/transcribe_audio_funasr_chunked.py` and speaker diarization enabled. Treat missing speaker labels in a multi-speaker recording as a quality failure, not a cosmetic issue.
+6. Inspect the ASR JSON before finalizing:
+   - confirm `speaker_diarization` is `true` unless the user explicitly chose a fast draft;
+   - confirm `speaker_count` is greater than zero before claiming speaker separation;
+   - confirm `sentence_info` or equivalent sentence-level data contains timestamps;
+   - confirm the recognized duration is close to the source audio duration.
+7. Finalize the ASR output into Obsidian notes with `scripts/finalize_to_obsidian.py`.
+8. Treat the generated `YYYY-MMDD-主题—Summary.md` as a placeholder or draft only. It is not a completed deliverable.
+9. Read the generated transcript note end to end, including the final section of long recordings, then overwrite `YYYY-MMDD-主题—Summary.md` with an Agent-written review Summary. Do not ask the user to accept the finalizer's rule-based draft as the Summary.
+10. Verify both Markdown files exist, the MP3 exists, speaker timestamp lines render in the transcript, the Agent-written Summary passes the review-summary requirements below, and no API key or backend-only metadata is written into note frontmatter.
 
 ## Distribution Docs
 
@@ -133,6 +153,25 @@ cd "$SKILL_DIR"
 
 The FunASR script records timing breakdowns in `*.funasr.transcript.json` under `timings`.
 
+For high-quality runs, the transcript must preserve both speaker labels and timestamps whenever the ASR backend returns them. Use the chunked script for long recordings or for recordings where the first pass produces incomplete speaker/timestamp structure:
+
+```bash
+cd "$SKILL_DIR"
+".venv/bin/python" scripts/transcribe_audio_funasr_chunked.py \
+  "/path/to/uploaded-audio" \
+  --out-dir "/tmp/miaoji-skill-funasr"
+```
+
+Do not call the transcript high quality until these checks pass:
+
+- `speaker_diarization` is `true`, unless the user explicitly chose a fast draft.
+- `speaker_count` is greater than zero for multi-speaker recordings.
+- The ASR output contains timestamped sentence or segment entries.
+- The rendered transcript contains standalone `Speaker N MM:SS` or `Speaker N HH:MM:SS` lines.
+- The last transcript timestamp is close to the source audio duration.
+
+If any check fails, state the failure clearly and rerun with a better mode before writing the final Obsidian notes. If rerun is impossible, mark the transcript as `partial` and explain the missing quality dimension in `## 整理说明`.
+
 For faster drafts where speaker diarization is not needed, run:
 
 ```bash
@@ -143,7 +182,7 @@ cd "$SKILL_DIR"
   --disable-speaker-diarization
 ```
 
-When `sentence_info` contains speaker IDs, preserve every distinct speaker ID in the transcript as `Speaker N`. This applies to two-person and multi-person recordings. If no speaker IDs are returned, state that speaker diarization was not produced and do not infer speakers as facts.
+When `sentence_info` contains speaker IDs, preserve every distinct speaker ID in the transcript as `Speaker N`. This applies to two-person and multi-person recordings. If no speaker IDs are returned, state that speaker diarization was not produced and render the fallback as `Speaker 0` for Obsidian plugin compatibility. Do not infer speakers as facts.
 
 ## Finalize Script
 
@@ -163,11 +202,16 @@ cd "$SKILL_DIR"
 
 The finalizer handles:
 
-- Converting or writing exactly one MP3 to `40 Resources/附件/录音原件`.
-- Creating `{{title}}—逐字稿.md`.
-- Creating `{{title}} - 智能摘要.md`.
+- Creating one source package under `40 Resources/源料库/{YYYY-MMDD-topic}`.
+- Converting or writing exactly one MP3 to the package `assets/` folder by default.
+- Copying the ASR JSON to `assets/transcript.json`.
+- Normalizing note titles to `YYYY-MMDD-主题` before writing files. The date prefix is derived from `--created`; pass `--title` as the topic portion unless the full prefixed title is already known.
+- Creating `YYYY-MMDD-主题—Raw.md`.
+- Creating `YYYY-MMDD-主题—逐字稿.md`.
+- Creating `YYYY-MMDD-主题—Summary.md` as a placeholder or draft for the Agent to overwrite after reading the transcript.
 - Merging consecutive same-speaker sentence fragments into natural speaker turns.
 - Preserving all returned speakers as `Speaker N`.
+- Rendering missing speaker IDs as `Speaker 0`, with an explicit note that speaker diarization was not produced.
 - Writing Obsidian task items with `- [ ]`.
 - Keeping human-facing frontmatter only.
 
@@ -205,13 +249,14 @@ Plugin behavior:
 - renders timestamps as blue buttons;
 - controls the same embedded audio file used by the transcript note;
 - creates one stable top audio player for the current note instead of one audio element per timestamp;
-- auto-pauses playback when the active document changes.
+- provides a close button on the top stable player to stop playback and remove the player manually;
+- stops playback and removes the top stable player when the active document changes.
 
 ## Note Shape
 
 Use `references/note-template.md` for the transcript note.
 
-Keep the summary short. Do not write personal reflection conclusions or unconfirmed personal judgments. The final note should mimic Feishu Minutes transcript documents:
+Keep the transcript note readable and source-faithful. Do not write personal reflection conclusions or unconfirmed personal judgments. The transcript note should mimic Feishu Minutes transcript documents:
 
 - YAML metadata.
 - `# {{title}}`
@@ -222,35 +267,58 @@ Keep the summary short. Do not write personal reflection conclusions or unconfir
 - `## 整理说明`
 - `## 文字记录`
 
-The transcript Obsidian file name must be the meeting topic or recording title plus `—逐字稿`:
+The source package folder and transcript Obsidian file name must start with a date prefix in `YYYY-MMDD` format, followed by a hyphen and the meeting topic or recording title:
 
 ```text
-{{title}}—逐字稿.md
+YYYY-MMDD-{{topic}}—逐字稿.md
 ```
 
-Do not include dates, ASR provider names, model names, status words, or other extra suffixes in the transcript file name unless the exact same title already exists and the user has approved a disambiguation strategy.
+The review Summary uses the same prefixed title:
 
-## Intelligent Summary Note Shape
+```text
+YYYY-MMDD-{{topic}}—Summary.md
+```
+
+Do not include ASR provider names, model names, status words, or other extra suffixes in the transcript file name unless the exact same title already exists and the user has approved a disambiguation strategy.
+
+## Review Summary Note Shape
 
 Use `references/summary-template.md` for the second note.
 
-The intelligent summary note should mimic the Feishu Minutes reference document structure. It is not a verbatim transcript and should not embed the audio player by default. It should link to the transcript note and source audio instead.
+The Summary note is a review-summary document, not a keyword extract and not a verbatim transcript. The finalizer creates a placeholder or rule-based draft only. A completed Summary requires Agent intervention: the Agent must read the transcript end to end and overwrite the Summary from understanding.
+
+Completion boundary:
+
+- Transcript completion means the ASR output has been finalized into a timestamped Obsidian transcript note and has passed the transcript quality checks.
+- Summary completion means the Agent has read the complete transcript and rewritten `YYYY-MMDD-主题—Summary.md`.
+- If only the finalizer draft exists, report the Summary as unfinished or draft, even if the file exists on disk.
+- Do not mark the task complete until the Agent-written Summary has replaced the placeholder draft, unless the user explicitly asks for transcript-only output.
+
+The review Summary should answer:
+
+- What happened in the recording?
+- What is the real theme or business/project question behind the conversation?
+- What conclusions, decisions, risks, and next actions are now clearer?
+- Which parts should be revisited through timestamps?
+- What still needs human confirmation because ASR, ownership, names, dates, or commitments are unclear?
+
+The Summary should not embed the audio player by default. It should link to the transcript note and source audio instead.
 
 File name:
 
 ```text
-{{title}} - 智能摘要.md
+YYYY-MMDD-{{topic}}—Summary.md
 ```
 
-Title:
+Default title:
 
 ```markdown
-# 智能纪要：{{title}}
+# 复盘 Summary：{{title}}
 ```
 
 Required sections:
 
-- `## 总结`: concise structured summary of the whole recording.
+- `## 总结`: structured synthesis of the whole recording. Do not summarize by listing generic keywords.
 - `## 后续计划`: split into `### 近期事项` and `### 长期规划` when the transcript supports both; otherwise use a single action-oriented list.
 - `## 待办`: concrete owner/action/deadline items using Obsidian native task-list syntax. Each task must start with `- [ ]`. If owner or deadline is unknown, write `未明确`, not a guess. Do not use a Markdown table for to-do items.
 - `## 智能章节`: timestamped chapters in `MM:SS  章节标题` or `HH:MM:SS  章节标题` format, with a short paragraph under each chapter.
@@ -263,6 +331,21 @@ Optional sections:
 - Add `## 风险与待确认` when the recording contains ambiguous commitments, unclear ownership, unclear deadlines, or ASR uncertainty that affects decisions.
 - Omit `## 金句时刻` if there are no real quotes worth preserving.
 
+Recommended extra sections for long project, meeting, course, or strategy recordings:
+
+- `## 一句话结论`: one sentence capturing the practical value of the recording.
+- `## 复盘视角：真正沉淀了什么`: interpretive synthesis of reusable lessons, project judgments, or workflow insights.
+- Topic-specific sections when the transcript clearly contains multiple business, learning, or product lines.
+
+Low-quality Summary signals that must be fixed before final response:
+
+- It says it was generated by a rule script or asks the user to verify a generic machine draft.
+- It contains broad filler such as "主要围绕 AI、产品、面试、知识库展开" without explaining the real structure.
+- It selects the first few long transcript turns as "representative" without synthesis.
+- It creates generic tasks such as "回听并确认关键专有名词" as the main value.
+- It invents owners, deadlines, decisions, quotes, or personal reflections not supported by the transcript.
+- It ignores late-recording content because only the first part of the transcript was read.
+
 Summary note frontmatter should stay human-facing:
 
 ```yaml
@@ -270,8 +353,9 @@ Summary note frontmatter should stay human-facing:
 type: audio-summary
 title: 会议主题
 source_type: audio
-transcript: "[[会议主题—逐字稿]]"
-audio: 40 Resources/附件/录音原件/录音文件.mp3
+transcript: "[[YYYY-MMDD-会议主题—逐字稿]]"
+raw_note: "[[YYYY-MMDD-会议主题—Raw]]"
+audio: 40 Resources/源料库/YYYY-MMDD-会议主题/assets/YYYY-MMDD-会议主题.mp3
 duration: 49:39
 created: 2026-06-05
 review_status: 已整理
@@ -297,7 +381,8 @@ type: interview-transcript
 title: 会议主题
 category: 面试
 source_type: audio
-audio: 40 Resources/附件/录音原件/录音文件.mp3
+raw_note: "[[YYYY-MMDD-会议主题—Raw]]"
+audio: 40 Resources/源料库/YYYY-MMDD-会议主题/assets/YYYY-MMDD-会议主题.mp3
 duration: 49:39
 created: 2026-06-05
 review_status: 已整理
@@ -355,7 +440,12 @@ Before final response:
 
 - Confirm the transcript artifact exists.
 - Confirm the final transcript Obsidian Markdown file exists.
-- Confirm the final intelligent summary Obsidian Markdown file exists.
+- Confirm the final review Summary Obsidian Markdown file exists.
 - Confirm no API key appears in generated files.
 - For FunASR, confirm whether `speaker_count` is greater than zero before claiming speaker separation.
+- Confirm the transcript includes standalone `Speaker N` timestamp lines, unless the user explicitly requested a fast draft without speaker diarization.
+- Confirm the last transcript timestamp is close to the source audio duration.
+- Confirm the Summary is an Agent-written review Summary, not the finalizer's placeholder or rule-based draft.
+- Confirm the Summary covers the whole recording, including the final section of long recordings.
+- Confirm the Summary does not contain low-quality draft phrases such as "规则脚本", "可优先复盘以下片段", or generic keyword-only summaries.
 - Report both final note paths and whether the transcript status is `ready` or `partial`.

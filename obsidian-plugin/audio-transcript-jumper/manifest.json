@@ -1,7 +1,7 @@
 {
   "id": "audio-transcript-jumper",
   "name": "Audio Transcript Jumper",
-  "version": "0.1.14",
+  "version": "0.1.16",
   "minAppVersion": "1.0.0",
   "description": "Turn audio transcript timestamps into clickable seek-and-play buttons for local embedded recordings.",
   "author": "LitDino-13",

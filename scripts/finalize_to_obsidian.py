@@ -17,8 +17,8 @@ from typing import Any
 
 
 DEFAULT_VAULT = Path(os.environ.get("OBSIDIAN_VAULT", "~/ObsidianVault")).expanduser()
-DEFAULT_NOTE_FOLDER = Path(os.environ.get("MIAOJI_NOTE_FOLDER", "40 Resources/录音转写"))
-DEFAULT_AUDIO_FOLDER = Path(os.environ.get("MIAOJI_AUDIO_FOLDER", "40 Resources/附件/录音原件"))
+DEFAULT_SOURCE_FOLDER = Path(os.environ.get("MIAOJI_SOURCE_FOLDER", "40 Resources/源料库"))
+DEFAULT_AUDIO_FOLDER = os.environ.get("MIAOJI_AUDIO_FOLDER")
 FILLER_WORDS = {"嗯", "呃", "啊", "哎", "好", "对", "好的", "好的好的", "嗯嗯", "hello", "你好"}
 TECH_REPLACEMENTS = [
     ("复 conu i", "ComfyUI"),
@@ -102,6 +102,20 @@ def slugify(value: str) -> str:
     return value[:120] or "录音"
 
 
+def title_prefix(created: str) -> str:
+    match = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", created)
+    if not match:
+        fail(f"Invalid --created value: {created}. Expected YYYY-MM-DD.")
+    return f"{match.group(1)}-{match.group(2)}{match.group(3)}"
+
+
+def apply_title_prefix(title: str, created: str) -> str:
+    title = slugify(title)
+    if re.match(r"^\d{4}-\d{4}-", title):
+        return title
+    return f"{title_prefix(created)}-{title}"
+
+
 def quote_yaml(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
@@ -148,8 +162,7 @@ def audio_duration(audio_path: Path) -> float:
         fail(f"Unable to parse audio duration: {result.stdout.strip()!r}")
 
 
-def ensure_mp3(source_audio: Path, vault: Path, audio_folder: Path, title: str, overwrite: bool) -> Path:
-    destination_dir = vault / audio_folder
+def ensure_mp3(source_audio: Path, destination_dir: Path, title: str, overwrite: bool) -> Path:
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / f"{slugify(title)}.mp3"
     if destination.exists() and not overwrite:
@@ -287,7 +300,7 @@ def parse_speaker_roles(values: list[str]) -> dict[int, str]:
 
 def participants_yaml(ids: list[int]) -> str:
     if not ids:
-        return "  - Speaker unknown"
+        return "  - Speaker 0"
     return "\n".join(f"  - Speaker {speaker_id}" for speaker_id in ids)
 
 
@@ -302,7 +315,7 @@ def tags_yaml(tags: list[str]) -> str:
 
 def speaker_note(ids: list[int], roles: dict[int, str]) -> str:
     if not ids:
-        return "- Speaker unknown：ASR 未返回说话人区分。"
+        return "- Speaker 0：ASR 未返回说话人区分；此处为插件兼容的未知单一说话人占位。"
     lines = []
     for speaker_id in ids:
         role = roles.get(speaker_id)
@@ -318,7 +331,7 @@ def speaker_note(ids: list[int], roles: dict[int, str]) -> str:
 def turn_blocks(turns: list[Turn]) -> str:
     blocks = []
     for turn in turns:
-        speaker = f"Speaker {turn.speaker}" if turn.speaker is not None else "Speaker unknown"
+        speaker = f"Speaker {turn.speaker}" if turn.speaker is not None else "Speaker 0"
         blocks.append(f"{speaker} {ms_to_stamp(turn.start)}\n\n{join_text(turn.texts)}")
     return "\n\n".join(blocks)
 
@@ -412,11 +425,28 @@ def build_summary(title: str, turns: list[Turn], duration_seconds: float, transc
     }
 
 
+def copy_transcript_json(transcript_json: Path, assets_dir: Path, overwrite: bool) -> Path:
+    destination = assets_dir / "transcript.json"
+    if destination.exists() and not overwrite:
+        return destination
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(transcript_json, destination)
+    return destination
+
+
+def package_dir_for(vault: Path, source_folder: Path, title: str) -> Path:
+    return vault / source_folder / title
+
+
+def audio_link_for_note(audio_path: Path, note_dir: Path) -> str:
+    return audio_path.name if audio_path.parent == note_dir else str(audio_path)
+
+
 def write_notes(
-    vault: Path,
-    note_folder: Path,
+    note_dir: Path,
     title: str,
     audio_rel: str,
+    transcript_json_rel: str,
     duration: str,
     created: str,
     speaker_ids_value: list[int],
@@ -427,19 +457,20 @@ def write_notes(
     recorded_time: str,
     overwrite: bool,
 ) -> tuple[Path, Path]:
-    note_dir = vault / note_folder
     note_dir.mkdir(parents=True, exist_ok=True)
     transcript_note_title = f"{title}—逐字稿"
-    summary_note_title = f"{title} - 智能摘要"
+    raw_note_title = f"{title}—Raw"
+    summary_note_title = f"{title}—Summary"
+    raw_path = note_dir / f"{raw_note_title}.md"
     transcript_path = note_dir / f"{transcript_note_title}.md"
     summary_path = note_dir / f"{summary_note_title}.md"
-    if not overwrite and (transcript_path.exists() or summary_path.exists()):
-        fail(f"Output note already exists. Use --overwrite to replace: {transcript_path} / {summary_path}")
+    if not overwrite and (raw_path.exists() or transcript_path.exists() or summary_path.exists()):
+        fail(f"Output note already exists. Use --overwrite to replace: {raw_path} / {transcript_path} / {summary_path}")
 
     participant_block = participants_yaml(speaker_ids_value)
     tag_block = tags_yaml(tags)
     audio_link = f"[[{audio_rel}|{Path(audio_rel).name}]]"
-    embedded_audio = f"![[{Path(audio_rel).name}]]"
+    embedded_audio = f"![[{audio_link_for_note(Path(audio_rel), note_dir)}]]"
     transcript_text = turn_blocks(turns)
     cleanup_note = (
         "- 本文由 ASR 转写结果整理而成，已合并连续同一说话人的短句碎片。\n"
@@ -448,12 +479,39 @@ def write_notes(
         "- 逐字稿中的 `Speaker N MM:SS` 行用于 Obsidian 时间戳跳转插件识别。"
     )
     summary = build_summary(title, turns, stamp_to_seconds(duration), transcript_note_title, audio_rel)
+    raw_md = f"""---
+type: audio-raw
+title: {quote_yaml(raw_note_title)}
+source_type: audio
+audio: {quote_yaml(audio_rel)}
+transcript_json: {quote_yaml(transcript_json_rel)}
+duration: {quote_yaml(duration)}
+created: {quote_yaml(created)}
+review_status: "原始资料"
+tags:
+{tags_yaml(["录音原始资料", *tags])}
+---
+
+# {raw_note_title}
+
+## 原始资料
+
+- 音频文件：{audio_link}
+- ASR 结构化结果：[[{transcript_json_rel}|transcript.json]]
+- 音频时长：{duration}
+- 创建日期：{created}
+
+## 说明
+
+此文件是录音资料包的原始资料索引。原始音频保存于 `assets/`，逐字稿与智能摘要分别保存在同一资料包目录下。
+"""
     transcript_md = f"""---
 type: interview-transcript
 title: {quote_yaml(transcript_note_title)}
 category: {quote_yaml(category)}
 source_type: audio
 audio: {quote_yaml(audio_rel)}
+raw_note: "[[{raw_note_title}]]"
 duration: {quote_yaml(duration)}
 created: {quote_yaml(created)}
 review_status: "已整理"
@@ -492,6 +550,7 @@ type: audio-summary
 title: {quote_yaml(summary_note_title)}
 source_type: audio
 transcript: "[[{transcript_note_title}]]"
+raw_note: "[[{raw_note_title}]]"
 audio: {quote_yaml(audio_rel)}
 duration: {quote_yaml(duration)}
 created: {quote_yaml(created)}
@@ -550,11 +609,12 @@ tags:
 {summary["links"]}
 """
     for secret in secret_patterns():
-        if secret and (secret in transcript_md or secret in summary_md):
+        if secret and (secret in raw_md or secret in transcript_md or secret in summary_md):
             fail("Generated note contains a known secret pattern; refusing to write.")
+    raw_path.write_text(raw_md, encoding="utf-8")
     transcript_path.write_text(transcript_md, encoding="utf-8")
     summary_path.write_text(summary_md, encoding="utf-8")
-    return transcript_path, summary_path
+    return raw_path, transcript_path, summary_path
 
 
 def stamp_to_seconds(stamp: str) -> float:
@@ -572,10 +632,11 @@ def main() -> None:
     parser.add_argument("--source-audio", required=True)
     parser.add_argument("--title")
     parser.add_argument("--vault", default=str(DEFAULT_VAULT))
-    parser.add_argument("--note-folder", default=str(DEFAULT_NOTE_FOLDER))
-    parser.add_argument("--audio-folder", default=str(DEFAULT_AUDIO_FOLDER))
+    parser.add_argument("--source-folder", default=str(DEFAULT_SOURCE_FOLDER))
+    parser.add_argument("--note-folder", help="Deprecated alias for --source-folder.")
+    parser.add_argument("--audio-folder", default=DEFAULT_AUDIO_FOLDER)
     parser.add_argument("--category", default="面试")
-    parser.add_argument("--tag", action="append", default=["面试转写"])
+    parser.add_argument("--tag", action="append", default=["录音转写"])
     parser.add_argument("--speaker-role", action="append", default=[])
     parser.add_argument("--recorded-time", default="未明确")
     parser.add_argument("--created", default=date.today().isoformat())
@@ -587,8 +648,7 @@ def main() -> None:
     transcript_json = Path(args.transcript_json).expanduser().resolve()
     source_audio = Path(args.source_audio).expanduser().resolve()
     vault = Path(args.vault).expanduser().resolve()
-    note_folder = Path(args.note_folder)
-    audio_folder = Path(args.audio_folder)
+    source_folder = Path(args.note_folder or args.source_folder)
     if not transcript_json.exists():
         fail(f"Transcript JSON does not exist: {transcript_json}")
     if not source_audio.exists():
@@ -597,18 +657,23 @@ def main() -> None:
         fail(f"Vault does not exist: {vault}")
 
     payload, sentences = load_sentences(transcript_json)
-    title = slugify(args.title or payload.get("source_file") or source_audio.stem)
-    audio_path = ensure_mp3(source_audio, vault, audio_folder, title, overwrite=args.overwrite)
+    title = apply_title_prefix(str(args.title or payload.get("source_file") or source_audio.stem), args.created)
+    note_dir = package_dir_for(vault, source_folder, title)
+    assets_dir = note_dir / "assets"
+    audio_dir = vault / Path(args.audio_folder) if args.audio_folder else assets_dir
+    audio_path = ensure_mp3(source_audio, audio_dir, title, overwrite=args.overwrite)
     audio_rel = str(audio_path.relative_to(vault))
+    transcript_json_path = copy_transcript_json(transcript_json, assets_dir, overwrite=args.overwrite)
+    transcript_json_rel = str(transcript_json_path.relative_to(vault))
     duration = seconds_to_stamp(audio_duration(audio_path))
     turns = merge_turns(sentences, max_chars=args.max_turn_chars, max_gap_ms=args.max_gap_ms)
     ids = speaker_ids(sentences)
     roles = parse_speaker_roles(args.speaker_role)
-    transcript_path, summary_path = write_notes(
-        vault=vault,
-        note_folder=note_folder,
+    raw_path, transcript_path, summary_path = write_notes(
+        note_dir=note_dir,
         title=title,
         audio_rel=audio_rel,
+        transcript_json_rel=transcript_json_rel,
         duration=duration,
         created=args.created,
         speaker_ids_value=ids,
@@ -625,6 +690,7 @@ def main() -> None:
                 "ok": True,
                 "title": title,
                 "audio": str(audio_path),
+                "raw_note": str(raw_path),
                 "transcript_note": str(transcript_path),
                 "summary_note": str(summary_path),
                 "speaker_count": len(ids),
